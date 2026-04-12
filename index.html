@@ -6,162 +6,7 @@
     <!-- External dependencies (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-color: #2b2a2e;
-            --surface-color: #232225;
-            --app-bg: #2b2b2b;
-            --accent-color: #89b4fa;
-            --text-primary: #e4e4e4;
-            --text-secondary: #9a9a9a;
-            --track-color: #3f404d;
-            --track-line: #a0a0a0;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-primary);
-            margin: 0;
-            padding: 40px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .app-container {
-            width: 1040px;
-            background-color: var(--surface-color);
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-            margin-bottom: 20px;
-        }
-
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 24px;
-        }
-
-        .title {
-            font-size: 1.3rem;
-            font-weight: 600;
-        }
-
-        .metrics-group {
-            display: flex;
-            gap: 24px;
-        }
-
-        .metric {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .metric-label {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: #a0a0a0;
-            margin-bottom: 6px;
-            font-weight: 600;
-        }
-
-        .metric-value {
-            color: #ffffff;
-        }
-
-        .canvas-container {
-            display: flex;
-            justify-content: center;
-            background-color: #121215;
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 24px;
-        }
-
-        .controls {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px 30px;
-        }
-
-        .control-row {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .control-label {
-            font-size: 0.95rem;
-            width: 170px;
-        }
-
-        input[type="range"] {
-            flex-grow: 1;
-            height: 6px;
-            -webkit-appearance: none;
-            background: #3e3e3e;
-            border-radius: 3px;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 14px;
-            height: 14px;
-            background: #89b4fa;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        .number-input {
-            width: 50px;
-            background: transparent;
-            border: 1px solid #5a5a5a;
-            color: #fff;
-            padding: 6px;
-            border-radius: 12px;
-            text-align: center;
-            font-family: inherit;
-            font-weight: 600;
-            font-size: 1rem;
-        }
-
-        .btn {
-            background-color: #3b3c4f;
-            color: #e4e4e4;
-            border: none;
-            border-radius: 16px;
-            padding: 10px 16px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: 0.2s;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: 400;
-        }
-
-        .btn:hover {
-            background-color: #4a4d62;
-        }
-
-        .btn-full {
-            grid-column: span 2;
-        }
-
-        .diagram-container {
-            width: 800px;
-            background: var(--surface-color);
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
-            box-sizing: border-box;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
@@ -519,17 +364,18 @@
         const py = CONFIG.pyCenter;
         
         let offset = 0;
-        if (lane === 0) offset = -CONFIG.laneWidth / 2;
-        else if (lane === 1) offset = CONFIG.laneWidth / 2;
-        else if (lane > 1) { 
+        if (lane <= 1) {
+            // Continuous interpolation between main left (0) and right (1) lanes
+            const lane0Offset = -CONFIG.laneWidth / 2;
+            const lane1Offset = CONFIG.laneWidth / 2;
+            // lane varies from 0.0 to 1.0
+            offset = lane0Offset + lane * (lane1Offset - lane0Offset);
+        } else { 
+            // Continuous interpolation between main right (1) and on-ramp (2)
             const rampPureOffset = CONFIG.laneWidth * 1.5;
-            if (lane === 2) {
-                offset = rampPureOffset;
-            } else {
-                let fraction = Math.max(0, Math.min(1, lane - 1.0));
-                let lane1Offset = CONFIG.laneWidth / 2;
-                offset = lane1Offset + fraction * (rampPureOffset - lane1Offset);
-            }
+            let fraction = Math.max(0, Math.min(1, lane - 1.0));
+            let lane1Offset = CONFIG.laneWidth / 2;
+            offset = lane1Offset + fraction * (rampPureOffset - lane1Offset);
         }
         return { x: px, y: py + offset };
     }

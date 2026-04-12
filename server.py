@@ -230,6 +230,19 @@ class APIServer(BaseHTTPRequestHandler):
                 self.wfile.write(b"index.html not found.")
             return
 
+        if parsed.path == '/styles.css':
+            try:
+                with open('styles.css', 'rb') as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/css')
+                self.end_headers()
+                self.wfile.write(content)
+            except FileNotFoundError:
+                self.send_response(404)
+                self.end_headers()
+            return
+
         if parsed.path == '/api/state':
             avg_f = sum(state.flow_history) / len(state.flow_history) if state.flow_history else 0
             avg_d = sum(state.density_history) / len(state.density_history) if state.density_history else 0
