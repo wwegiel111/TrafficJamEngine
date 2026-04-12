@@ -207,6 +207,12 @@ class APIServer(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
 
+    def do_HEAD(self):
+        """Satisfies health checks from hosting platforms like Render by returning headers without a body."""
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/html')
+        self.end_headers()
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         
@@ -297,10 +303,13 @@ class APIServer(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
+import os
+
 if __name__ == "__main__":
     threading.Thread(target=sim_worker, daemon=True).start()
     
-    server_address = ('127.0.0.1', 8080)
+    port = int(os.environ.get("PORT", 8080))
+    server_address = ('0.0.0.0', port)
     server = HTTPServer(server_address, APIServer)
     
     print(f"Simulation engine securely bound to {server_address[0]}:{server_address[1]}")
