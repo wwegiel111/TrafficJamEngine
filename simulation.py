@@ -9,8 +9,6 @@ each holding either nothing or a single vehicle. Every step has three phases:
 """
 
 import random
-import uuid
-
 import config
 
 
@@ -39,8 +37,7 @@ class TrafficSimulation:
         # Three lanes of equal length L (though the ramp is shorter, we keep the same list length and just ignore the tail)
         self.lanes = [[None] * self.L for _ in range(3)]
 
-        # Counters used to give each spawned car a unique id
-        self.sim_id = uuid.uuid4().hex[:6]
+        # Counter used to give each spawned car a unique numeric id
         self.car_id_counter = 0
 
     # ---------- Helpers: gap calculations
@@ -188,8 +185,8 @@ class TrafficSimulation:
             self.lanes[self.LANE_RAMP][ramp_start] = self._make_car(max(0, self.v_max - 2))
 
     def _make_car(self, v):
-        """Construct a new car dict with a unique id."""
-        car = {'id': f"{self.sim_id}_{self.car_id_counter}", 'v': v}
+        """Construct a new car dict with a unique numeric id."""
+        car = {'id': self.car_id_counter, 'v': v}
         self.car_id_counter += 1
         return car
 
