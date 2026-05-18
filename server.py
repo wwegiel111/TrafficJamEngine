@@ -20,10 +20,10 @@ class TrafficSimulation:
         self.p: float = p                  # Probability of random braking
         
         # Initialization of three lanes. 0: Left, 1: Right, 2: On-Ramp
-        self.lanes: List[List[Optional[Dict[str, Any]]]] = [[None for _ in range(L)] for _ in range(3)]
-        
-        self.sim_id: str = str(uuid.uuid4())[:8]
-        self.car_id_counter: int = 0
+        self.lanes = []
+        for _ in range(3):
+            pas_ruchu = [None] * L  # Mnożenie listy stworzy L pustych miejsc
+            self.lanes.append(pas_ruchu)
 
     def _get_gap(self, lane: int, x: int) -> int:
         """Returns the distance in free cells preserving physical road end constraints (open boundaries)."""
