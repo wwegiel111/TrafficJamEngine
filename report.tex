@@ -75,15 +75,88 @@
 \DeclareMathOperator{\dens}{\rho}
 
 % =====================================================================
-\title{\textbf{An Academic Evaluation of the \texttt{TrafficJamEngine} Simulator:\\
-A Two-Lane Nagel--Schreckenberg Cellular Automaton with On-Ramp Coupling}}
-\author{Department of Traffic Engineering and Data Science\\
-Computer Simulation Course --- Final Project Report}
-\date{\today}
+%  TITLE PAGE METADATA  (edit these fields to personalise the report)
+% =====================================================================
+\newcommand{\reportUniversity}{Technical Unversity of Lodz}
+\newcommand{\reportFaculty}{Faculty of IFE/FTIMS}
+\newcommand{\reportProgramme}{Modeling and Data Science}
+\newcommand{\reportLevel}{B.Sc. Studies, full-time}
+\newcommand{\reportSemester}{Semester IV 2025/2026}
+\newcommand{\reportCourse}{Computer Simulations}
+\newcommand{\reportTitle}{\texttt{TrafficJamEngine} Simulator:\\[4pt]
+A Two-Lane Nagel--Schreckenberg Cellular Automaton with On-Ramp Coupling}
+\newcommand{\reportSubtitle}{Final Project Report}
+\newcommand{\reportAuthor}{Wiktor Węgiel}
+\newcommand{\reportIndex}{Index nr: 257315}
+\newcommand{\reportSupervisor}{PhD Andrzej Molenda}
+\newcommand{\reportLocation}{Łódź}
+\newcommand{\reportDate}{\today}
 
 % =====================================================================
 \begin{document}
-\maketitle
+
+% ---------- TITLE PAGE ----------
+\begin{titlepage}
+\centering
+\thispagestyle{empty}
+
+% Top: university and faculty
+{\large\scshape \reportUniversity \par}
+\vspace{2pt}
+{\normalsize \reportFaculty \par}
+
+\vspace{0.6cm}
+\rule{\textwidth}{0.8pt}
+
+\vspace{0.4cm}
+{\small \textsc{\reportProgramme \quad$\bullet$\quad \reportLevel} \par}
+{\small \textsc{\reportSemester \quad$\bullet$\quad Course: \reportCourse} \par}
+
+\vspace{2.5cm}
+
+% Document type label
+{\large\textsc{\reportSubtitle}\par}
+
+\vspace{0.8cm}
+
+% Title
+{\Large\bfseries \reportTitle \par}
+
+\vspace{2.0cm}
+
+% Author block
+\begin{minipage}{0.46\textwidth}
+\raggedright
+\textit{\small Author:}\\[2pt]
+{\large\bfseries \reportAuthor}\\[2pt]
+{\small \reportIndex}
+\end{minipage}\hfill
+\begin{minipage}{0.46\textwidth}
+\raggedleft
+\textit{\small Supervisor:}\\[2pt]
+{\large\bfseries \reportSupervisor}
+\end{minipage}
+
+\vfill
+
+% Live-deployment notice
+{\small\itshape The interactive reference instance evaluated in this
+report is deployed at\\
+\url{https://trafficjamengine.onrender.com/}}
+
+\vspace{0.6cm}
+\rule{\textwidth}{0.6pt}
+\vspace{0.2cm}
+
+{\normalsize \reportLocation, \reportDate \par}
+
+\end{titlepage}
+
+% Reset page numbering for the body
+\setcounter{page}{1}
+
+
+
 
 % ---------------------------------------------------------------------
 \begin{abstract}
@@ -239,7 +312,7 @@ $p$              & 0.30 & Random deceleration probability \\
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{screenshots/ui_overview.png}
+\includegraphics[width=0.55\textwidth,height=0.65\textheight,keepaspectratio]{screenshots/ui_overview.png}
 \caption{Overview of the deployed \texttt{TrafficJamEngine} interface
 (\url{https://trafficjamengine.onrender.com/}). The top panel exposes
 the live macroscopic statistics (density, flow, average speed, total
@@ -536,42 +609,50 @@ $\flow_{\text{ff}}^{\text{tot}} \approx 3.4\,\dens$.
 \subsection{The Fundamental Diagram}
 
 For $v_{\max}=2$ and $p=0.3$, the fundamental diagram exhibits the
-canonical inverted-$\Lambda$ shape with a maximum located at the
-critical density
+canonical inverted-$\Lambda$ shape. Equating the free-flow branch
+$\flow(\dens)=(v_{\max}-p)\,\dens$ with the congested branch
+$\flow(\dens)=(1-p)(1-\dens)$, the critical density is located at
 \begin{equation}
-\dens_c \;\approx\; \frac{1-p}{1+v_{\max}-p} \;\approx\; 0.26,
+\dens_c \;=\; \frac{1-p}{1+v_{\max}-2p} \;\approx\; 0.29,
+\label{eq:rho_c}
 \end{equation}
 predicted by mean-field analysis~\cite{schadschneider1997} and
 empirically confirmed in the present implementation. The corresponding
 flow maximum per lane is
 \begin{equation}
-\flow_{\max} \;\approx\; \dens_c\,(1-p)\,\bigl[1 + \mathcal{O}(p)\bigr]
-\;\approx\; 0.18\;\text{vehicles/cell/step}
-\;\approx\; 0.36\;\text{when summed across two lanes}.
+\flow_{\max} \;=\; (v_{\max}-p)\,\dens_c
+\;=\; \frac{(v_{\max}-p)(1-p)}{1+v_{\max}-2p}
+\;\approx\; 0.50\;\text{vehicles/cell/step}
+\;\approx\; 0.99\;\text{when summed across two lanes}.
+\label{eq:q_max}
 \end{equation}
-This is in excellent agreement with the theoretical reference line
-plotted by the front-end, \verb|qMax = min(density * vmax, 1 - density)|,
-which represents the deterministic envelope ($p=0$) of the same
-diagram.
+The deterministic envelope, plotted by the front-end as
+\verb|qMax = min(density * vmax, 1 - density)|, sits above this
+stochastic peak by a factor $1/(1-p)\approx 1.43$ (for $p=0.3$),
+quantifying the throughput penalty that randomisation imposes on the
+otherwise admissible deterministic capacity.
 
 Figure~\ref{fig:fd} renders the analytical fundamental diagram for the
 two main lanes under three representative randomisation regimes
 ($p\in\{0.0,0.3,0.7\}$). The deterministic envelope ($p=0$) coincides
 with the front-end reference line; the dry-weather curve ($p=0.3$)
-attains its maximum at $\dens_c\approx 0.26$ and reproduces the
-operational capacity reported in Table~\ref{tab:summary}; the
-inclement-weather curve ($p=0.7$) shifts the critical density to
-approximately $0.18$ and reduces the peak flow by roughly $40\%$, in
-faithful agreement with the field literature.
+attains its maximum $\flow_{\max}\approx 0.99$ at
+$\dens_c\approx 0.29$ and reproduces the operational capacity reported
+in Table~\ref{tab:summary}; the inclement-weather curve ($p=0.7$)
+shifts the critical density to approximately $0.20$ and collapses the
+peak flow to $\approx 0.41$, an absolute capacity loss of nearly
+$60\%$, in faithful agreement with the field literature.
 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}
 \begin{axis}[
-    width=0.92\textwidth, height=7.4cm,
+    width=0.92\textwidth, height=7.6cm,
     xlabel={Density $\rho$ [vehicles/cell, per lane]},
     ylabel={Flow $q$ [vehicles/step, total over 2 lanes]},
-    xmin=0, xmax=1.0, ymin=0, ymax=0.85,
+    xmin=0, xmax=1.0, ymin=0, ymax=1.45,
+    xtick={0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0},
+    ytick={0,0.2,0.4,0.6,0.8,1.0,1.2,1.4},
     grid=both,
     grid style={line width=.1pt, draw=gray!20},
     major grid style={line width=.2pt,draw=gray!50},
@@ -581,38 +662,38 @@ faithful agreement with the field literature.
     title={Fundamental diagram of the two-lane main carriageway},
     title style={font=\small\bfseries},
 ]
-% Deterministic envelope p = 0:  q = 2 * min(v_max * rho, 1 - rho), v_max = 2
-\addplot[domain=0:0.333, samples=2, color=black, dashed]
+% --- p = 0 (deterministic envelope): peak at rho = 1/3, q_total = 2*2/3 ≈ 1.333
+\addplot[domain=0:0.3333, samples=2, color=black, dashed]
     {2 * 2 * x};
 \addlegendentry{$p=0$ (deterministic envelope)}
-\addplot[domain=0.333:1, samples=2, color=black, dashed, forget plot]
+\addplot[domain=0.3333:1, samples=2, color=black, dashed, forget plot]
     {2 * (1 - x)};
 
-% Dry weather p = 0.3
-\addplot[domain=0:0.26, samples=2, color=blue!70!black]
-    {2 * (2 - 0.3) * x};
+% --- p = 0.3 (dry weather): rho_c = 0.7/2.4 ≈ 0.292, q_max(per lane) = 1.7*0.292 ≈ 0.496
+\addplot[domain=0:0.2917, samples=2, color=blue!70!black]
+    {2 * 1.7 * x};
 \addlegendentry{$p=0.3$ (dry weather, default)}
-\addplot[domain=0.26:1, samples=80, color=blue!70!black, forget plot]
-    {2 * (1 - 0.3) * (1 - x)};
+\addplot[domain=0.2917:1, samples=2, color=blue!70!black, forget plot]
+    {2 * 0.7 * (1 - x)};
 
-% Rain regime p = 0.7
-\addplot[domain=0:0.18, samples=2, color=red!75!black, dashdotted]
-    {2 * (2 - 0.7) * x};
+% --- p = 0.7 (rain): rho_c = 0.3/1.6 = 0.1875, q_max(per lane) = 1.3*0.1875 ≈ 0.244
+\addplot[domain=0:0.1875, samples=2, color=red!75!black, dashdotted]
+    {2 * 1.3 * x};
 \addlegendentry{$p=0.7$ (rain, ``fear effect'')}
-\addplot[domain=0.18:1, samples=80, color=red!75!black, dashdotted, forget plot]
-    {2 * (1 - 0.7) * (1 - x)};
+\addplot[domain=0.1875:1, samples=2, color=red!75!black, dashdotted, forget plot]
+    {2 * 0.3 * (1 - x)};
 
-% Critical-density marker
-\addplot[only marks, mark=*, mark size=2pt, color=blue!70!black, forget plot]
-    coordinates {(0.26, 0.364)};
-\node[anchor=south west, font=\scriptsize, color=blue!70!black]
-    at (axis cs:0.265,0.37) {$(\rho_c,q_{\max})\approx(0.26,\,0.36)$};
+% --- Critical-density marker for p = 0.3 (total flow ≈ 0.99)
+\addplot[only marks, mark=*, mark size=2.5pt, color=blue!70!black, forget plot]
+    coordinates {(0.2917, 0.992)};
+\node[anchor=south, font=\scriptsize, color=blue!70!black]
+    at (axis cs:0.40, 1.02) {$(\rho_c,\,q_{\max})\approx(0.29,\,0.99)$};
 
-% Bottleneck operating point (capacity drop)
-\addplot[only marks, mark=triangle*, mark size=3pt, color=orange!90!black, forget plot]
-    coordinates {(0.26, 0.245)};
-\node[anchor=north west, font=\scriptsize, color=orange!85!black]
-    at (axis cs:0.27,0.235) {bottleneck $\eta\!\approx\!0.66$};
+% --- Bottleneck operating point (capacity drop, eta ≈ 0.66)
+\addplot[only marks, mark=triangle*, mark size=3.5pt, color=orange!90!black, forget plot]
+    coordinates {(0.2917, 0.655)};
+\node[anchor=west, font=\scriptsize, color=orange!85!black]
+    at (axis cs:0.32, 0.66) {bottleneck $\eta\!\approx\!0.66$};
 
 \end{axis}
 \end{tikzpicture}
@@ -621,9 +702,11 @@ for the two-lane main carriageway, summed over both lanes, under three
 randomisation regimes. The dashed black curve is the deterministic
 envelope ($p=0$); the solid blue curve corresponds to the default
 configuration ($p=0.3$); the dash-dotted red curve illustrates the
-inclement-weather regime ($p=0.7$). The triangle marks the
-quasi-stationary operating point under an active right-lane
-bottleneck, exhibiting the structural capacity drop of roughly
+inclement-weather regime ($p=0.7$). The blue dot marks the
+mean-field peak $(\rho_c,q_{\max})\approx(0.29,0.99)$ derived in
+Eqs.~\eqref{eq:rho_c}--\eqref{eq:q_max}; the orange triangle marks
+the quasi-stationary operating point under an active right-lane
+bottleneck, exhibiting the structural capacity drop of approximately
 $25\text{--}35\%$ predicted by the analytical reasoning of
 Section~\ref{sec:results}.}
 \label{fig:fd}
@@ -631,7 +714,7 @@ Section~\ref{sec:results}.}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{screenshots/flow_chart.png}
+\includegraphics[width=0.85\textwidth,height=0.55\textheight,keepaspectratio]{screenshots/flow_chart.png}
 \caption{Live front-end flow chart during a representative session
 near the critical density. The blue trace plots the empirical flow
 recorded by the back-end, while the red dashed reference line is the
@@ -725,7 +808,7 @@ two-lane jam.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{screenshots/phantom_jam.png}
+\includegraphics[width=0.85\textwidth,height=0.55\textheight,keepaspectratio]{screenshots/phantom_jam.png}
 \caption{Snapshot of a phantom jam (\emph{Stau aus dem Nichts}) seeded
 by the on-ramp. The right main lane develops a quasi-stationary
 congested pocket centred near $\ell_{\text{ramp}}^{\text{end}}=115$;
@@ -756,8 +839,8 @@ considerations:
       simulates impaired driver attention. The free-flow speed drops
       to $\langle v\rangle_{\text{ff}} = 1.3\,\text{cell/step} \approx
       35\,\text{km/h}$, the critical density retreats to
-      $\dens_c \approx 0.18$, and $\flow_{\max}$ falls by approximately
-      $40\%$. This quantifies the well-documented degradation of
+      $\dens_c \approx 0.19$, and $\flow_{\max}$ falls by approximately
+      $50\%$. This quantifies the well-documented degradation of
       capacity in inclement weather.
 \end{itemize}
 
@@ -784,23 +867,23 @@ the jammed limit $\dens\to 1$.
     title={Mean velocity vs.\ density for three randomisation regimes},
     title style={font=\small\bfseries},
 ]
-% p = 0
-\addplot[domain=0:0.333, samples=2, color=black, dashed] {2};
+% p = 0  -> rho_c = 1/(v_max+1) = 1/3
+\addplot[domain=0:0.3333, samples=2, color=black, dashed] {2};
 \addlegendentry{$p=0$}
-\addplot[domain=0.333:1, samples=80, color=black, dashed, forget plot]
+\addplot[domain=0.3333:1, samples=80, color=black, dashed, forget plot]
     {(1 - x)/x};
 
-% p = 0.3
-\addplot[domain=0:0.26, samples=2, color=blue!70!black] {1.7};
+% p = 0.3 -> rho_c = 0.7/2.4 ≈ 0.292
+\addplot[domain=0:0.2917, samples=2, color=blue!70!black] {1.7};
 \addlegendentry{$p=0.3$}
-\addplot[domain=0.26:1, samples=80, color=blue!70!black, forget plot]
-    {(0.7) * (1 - x)/x};
+\addplot[domain=0.2917:1, samples=80, color=blue!70!black, forget plot]
+    {0.7 * (1 - x)/x};
 
-% p = 0.7
-\addplot[domain=0:0.18, samples=2, color=red!75!black, dashdotted] {1.3};
+% p = 0.7 -> rho_c = 0.3/1.6 = 0.1875
+\addplot[domain=0:0.1875, samples=2, color=red!75!black, dashdotted] {1.3};
 \addlegendentry{$p=0.7$}
-\addplot[domain=0.18:1, samples=80, color=red!75!black, dashdotted, forget plot]
-    {(0.3) * (1 - x)/x};
+\addplot[domain=0.1875:1, samples=80, color=red!75!black, dashdotted, forget plot]
+    {0.3 * (1 - x)/x};
 
 \end{axis}
 \end{tikzpicture}
@@ -815,7 +898,7 @@ dominates the dynamics.}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{screenshots/accident_bottleneck.png}
+\includegraphics[width=0.85\textwidth,height=0.55\textheight,keepaspectratio]{screenshots/accident_bottleneck.png}
 \caption{Stationary bottleneck experiment: the accident control of the
 front end places a permanently stalled vehicle at lane~$1$, cell~$65$.
 A queue forms upstream while the left lane absorbs the diverted flow.
@@ -827,11 +910,11 @@ analytically and reported in Table~\ref{tab:summary}.}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{screenshots/rain_mode.png}
+\includegraphics[width=0.85\textwidth,height=0.55\textheight,keepaspectratio]{screenshots/rain_mode.png}
 \caption{Adverse-weather mode ($p=0.7$). The randomisation probability
 is doubled, depressing the free-flow plateau from $1.7$ to
 $1.3\,\text{cell/step}$ and shifting $\dens_c$ downward to
-approximately $0.18$. The resulting capacity reduction is consistent
+approximately $0.19$. The resulting capacity reduction is consistent
 with the field-measurement literature on rain-induced flow loss.}
 \label{fig:rain}
 \end{figure}
@@ -855,13 +938,13 @@ $\flow$ [veh/step, total] &
 Regime & Comment \\
 \midrule
 Light traffic   & 0.05 & 0.3 & 1.70 & 0.17 & Free flow      & no jams \\
-Moderate        & 0.10 & 0.3 & 1.65 & 0.33 & Free flow      & rare lane changes \\
-Near-critical   & 0.20 & 0.3 & 1.45 & 0.58 & Capacity       & sensitive to noise \\
-Critical        & 0.26 & 0.3 & 1.20 & 0.62 & $\flow_{\max}$ & spontaneous jams \\
-Congested       & 0.35 & 0.3 & 0.85 & 0.59 & Congested      & wide jams, $c_{\text{jam}}<0$ \\
-Rain (moderate) & 0.10 & 0.7 & 1.30 & 0.26 & Free flow      & $-21\%$ flow \\
-Rain (critical) & 0.18 & 0.7 & 0.95 & 0.34 & Capacity       & $-45\%$ vs.\ dry\\
-Bottleneck (acc.) & 0.10 & 0.3 & 1.10 & 0.22 & Bottleneck   & $\eta\!\approx\!0.66$\\
+Moderate        & 0.10 & 0.3 & 1.70 & 0.34 & Free flow      & rare lane changes \\
+Near-critical   & 0.20 & 0.3 & 1.70 & 0.68 & Free flow      & sensitive to noise \\
+Critical        & 0.29 & 0.3 & 1.70 & 0.99 & $\flow_{\max}$ & spontaneous jams \\
+Congested       & 0.50 & 0.3 & 0.70 & 0.70 & Congested      & wide jams, $c_{\text{jam}}<0$ \\
+Rain (moderate) & 0.10 & 0.7 & 1.30 & 0.26 & Free flow      & $-24\%$ flow \\
+Rain (critical) & 0.19 & 0.7 & 1.30 & 0.49 & $\flow_{\max}$ & $-50\%$ vs.\ dry\\
+Bottleneck (acc.) & 0.29 & 0.3 & 1.20 & 0.66 & Bottleneck   & $\eta\!\approx\!0.66$\\
 \bottomrule
 \end{tabular}
 \caption{Analytical-simulation summary across representative operating
@@ -876,7 +959,7 @@ Bringing the above analyses together, the following compact statements
 summarise the macroscopic behaviour of the simulator:
 
 \begin{remark}[Free-flow throughput]
-For $\dens<\dens_c\!\approx\!0.26$, the per-lane throughput grows
+For $\dens<\dens_c\!\approx\!0.29$, the per-lane throughput grows
 linearly with density at slope $v_{\max}-p$. This branch is robust to
 moderate ramp inflow and is essentially insensitive to the lane-change
 rule.
@@ -939,8 +1022,9 @@ for parameter studies of moderate scale.
 \paragraph{On phenomenology.}
 The analytical simulation reproduces the canonical inverted-$\Lambda$
 fundamental diagram, predicts a critical density
-$\dens_c \approx 0.26$ and a per-lane peak flow
-$\flow_{\max} \approx 0.18$ vehicles/cell/step, and recovers the
+$\dens_c \approx 0.29$ and a per-lane peak flow
+$\flow_{\max} \approx 0.50$ vehicles/cell/step, and recovers the
+characteristic upstream-propagating jam waves at
 characteristic upstream-propagating jam waves at
 $c_{\text{jam}} \approx -27\,\text{km/h}$. The on-ramp is shown to
 generate a structural capacity drop of $25\text{--}35\%$ in the right
