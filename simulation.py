@@ -25,7 +25,7 @@ class TrafficSimulation:
       {'id': str, 'v': int, 'crashed': bool (optional)}.
     """
 
-    # Lane indices (avoids magic numbers throughout the code)
+    # Lane indices
     LANE_LEFT = 0
     LANE_RIGHT = 1
     LANE_RAMP = 2
@@ -36,14 +36,14 @@ class TrafficSimulation:
         self.v_max = v_max if v_max is not None else config.INITIAL_V_MAX
         self.p = p if p is not None else config.INITIAL_P
 
-        # Three lanes of equal length L (ramp only uses cells 0..RAMP_LENGTH-1)
+        # Three lanes of equal length L (though the ramp is shorter, we keep the same list length and just ignore the tail)
         self.lanes = [[None] * self.L for _ in range(3)]
 
         # Counters used to give each spawned car a unique id
         self.sim_id = uuid.uuid4().hex[:6]
         self.car_id_counter = 0
 
-    # ---------- Helpers: gap calculations ----------
+    # ---------- Helpers: gap calculations
 
     def _lane_limit(self, lane):
         """Usable length of a lane (ramp is shorter than main lanes)."""
@@ -71,7 +71,7 @@ class TrafficSimulation:
                 return i - 1
         return self.v_max
 
-    # ---------- Single simulation step ----------
+    # ---------- Single simulation step
 
     def step(self):
         """
@@ -84,7 +84,7 @@ class TrafficSimulation:
         density, avg_speed = self._compute_metrics()
         return flow, lane_changes, density, avg_speed
 
-    # --- Phase 1: lane changes ---
+    # Phase 1: lane changes
 
     def _phase_lane_changes(self):
         """Each car decides whether to change lane; we apply changes in one batch."""
@@ -133,7 +133,7 @@ class TrafficSimulation:
         gap_there = self._gap_ahead(target, x)
         return gap_here < car['v'] and gap_there > gap_here
 
-    # --- Phase 2: forward motion ---
+    # Phase 2: forward motion
 
     def _phase_move(self):
         """Standard NaSch update: accelerate, brake to gap, randomize, move."""
@@ -172,7 +172,7 @@ class TrafficSimulation:
         self.lanes = new_lanes
         return flow
 
-    # --- Phase 3: spawn ---
+    # Phase 3: spawn
 
     def _phase_spawn(self):
         """Inject new cars at the open boundary."""
@@ -193,7 +193,7 @@ class TrafficSimulation:
         self.car_id_counter += 1
         return car
 
-    # --- Statistics ---
+    # --- Statistics
 
     def _compute_metrics(self):
         """Density on main lanes and mean speed across all lanes."""

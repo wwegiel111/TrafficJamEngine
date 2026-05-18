@@ -1,9 +1,3 @@
-/* ======================================================
- * TrafficJamEngine - styles
- * Layout adapts from small laptop displays up to 4K.
- * Tested target: 14" MacBook Pro Retina (1512x982 logical).
- * ====================================================== */
-
 :root {
     --bg-color: #2b2a2e;
     --surface-color: #232225;

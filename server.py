@@ -1,12 +1,5 @@
 """
 HTTP server for the NaSch traffic simulation.
-
-Architecture:
-  - `simulation.TrafficSimulation` is the pure simulation kernel.
-  - `ServerState` keeps the current run + sliding-window statistics.
-  - `sim_worker` drives one simulation step every TICK_INTERVAL seconds
-    in a background thread.
-  - `APIServer` is a thin REST layer used by `index.html`.
 """
 
 import json
@@ -21,7 +14,6 @@ import config
 from simulation import TrafficSimulation
 
 
-# Logging is configured once for the whole process
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
@@ -51,7 +43,6 @@ class ServerState:
         self.density_history = []
         self.speed_history = []
 
-        # Cumulative counters (kept across the whole run)
         self.total_lane_changes = 0
         self.total_sim_ticks = 0
 
@@ -128,7 +119,7 @@ class APIServer(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'text/html')
         self.end_headers()
 
-    # ----- GET routes -----
+    # ----- GET routes
 
     def do_GET(self):
         path = urllib.parse.urlparse(self.path).path
@@ -144,7 +135,7 @@ class APIServer(BaseHTTPRequestHandler):
         else:
             self._send_status(404)
 
-    # ----- POST routes -----
+    # ----- POST routes
 
     def do_POST(self):
         path = urllib.parse.urlparse(self.path).path
@@ -154,7 +145,7 @@ class APIServer(BaseHTTPRequestHandler):
         else:
             self._send_status(404)
 
-    # ----- Helpers -----
+    # ----- Helpers
 
     def _cors_headers(self):
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -222,7 +213,7 @@ class APIServer(BaseHTTPRequestHandler):
             self._send_json({'error': 'invalid JSON'}, code=400)
             return
 
-        # --- numeric parameters ---
+        # --- numeric parameters
         if 'density' in data:
             state.sim_params['density'] = float(data['density'])
             state.live_sim.density = state.sim_params['density']
@@ -238,12 +229,12 @@ class APIServer(BaseHTTPRequestHandler):
         if 'speed_multiplier' in data:
             state.sim_params['speed_multiplier'] = float(data['speed_multiplier'])
 
-        # --- run state ---
+        # --- run state
         if 'is_running' in data:
             state.is_running = bool(data['is_running'])
             logger.info("Run state: %s", "running" if state.is_running else "paused")
 
-        # --- special events ---
+        # --- special events
         lane = config.ACCIDENT_LANE
         cell = config.ACCIDENT_CELL
 

@@ -1,48 +1,38 @@
-/* ===========================================================
- * TrafficJamEngine - front-end
- * Drives controls, polls /api/state, renders cars on canvas
- * =========================================================== */
-
 const API_URL = window.location.origin;
 const FETCH_INTERVAL = 150; // matches backend tick
 
-// ----- Road layout constants used by renderer -----
+// ----- Road layout constants used by renderer
 const ROAD = {
     L: 150,             // cells on main lanes
     rampStart: 70,      // first ramp cell
     rampEnd: 115,       // last usable ramp cell
 };
 
-// ----- DOM lookup helper -----
+// ----- DOM lookup helper
 const $ = id => document.getElementById(id);
 
-// ----- Canvas + responsive sizing -----
+// ----- Canvas + responsive sizing
 const canvas = $('roadCanvas');
 const ctx = canvas.getContext('2d');
-
-// `view` holds CSS pixel coordinates derived from the current canvas size
 const view = { width: 0, height: 0, laneWidth: 46, pyCenter: 0 };
 
 function resizeCanvas() {
-    // Match the backing store to displayed CSS size, accounting for HiDPI displays
     const dpr = window.devicePixelRatio || 1;
     const cssWidth = canvas.clientWidth;
     const cssHeight = canvas.clientHeight;
 
     canvas.width = Math.round(cssWidth * dpr);
     canvas.height = Math.round(cssHeight * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); 
 
     view.width = cssWidth;
     view.height = cssHeight;
     view.pyCenter = cssHeight / 2;
-    // Lane width scales with canvas height so ramps stay readable on any screen
     view.laneWidth = Math.max(28, Math.min(60, Math.round(cssHeight * 0.11)));
 }
 
 window.addEventListener('resize', resizeCanvas);
 
-// ----- Controls state -----
 let isRunning = false;
 let isRaining = false;
 let uiDensity = 10;
@@ -55,7 +45,7 @@ function resetStats() {
     sessionData = [];
 }
 
-// ----- API helpers -----
+// ----- API helpers
 function sendConfig(opts) {
     return fetch(`${API_URL}/api/config`, {
         method: 'POST',
@@ -64,7 +54,7 @@ function sendConfig(opts) {
     }).catch(err => console.error(err));
 }
 
-// ----- Sliders -----
+// ----- Sliders
 const domDensity = $('paramDensity');
 const domVmax = $('paramVmax');
 const domSpeedMulti = $('paramSpeedMulti');
@@ -93,7 +83,7 @@ const inpSpeedMulti = $('inpSpeedMulti');
     });
 });
 
-// ----- Buttons -----
+// ----- Buttons
 const btnToggle = $('btnToggle');
 btnToggle.addEventListener('click', () => {
     if (isRunning) {
@@ -140,7 +130,7 @@ $('btnReset').addEventListener('click', () => {
     flowChart.update();
 });
 
-// ----- Summary modal -----
+// ----- Summary modal
 function showSummary() {
     const m = Math.floor(simStats.ticks / 60);
     const s = simStats.ticks % 60;
@@ -166,7 +156,7 @@ $('btnExportCSV').addEventListener('click', () => {
     document.body.removeChild(link);
 });
 
-// ----- Vehicle tracker (per-id animation state) -----
+// ----- Vehicle tracker (per-id animation state)
 let carsTracker = {};
 
 function updateTargets(lanes) {
@@ -205,7 +195,7 @@ function updateTargets(lanes) {
     }
 }
 
-// ----- Geometry helpers -----
+// ----- Geometry helpers 
 function laneToScreen(cell, lane) {
     // Map cell index to horizontal pixels (slightly past edges so cars enter/exit smoothly)
     const pxStart = -view.width * 0.05;
@@ -407,7 +397,7 @@ function drawRain() {
     }
 }
 
-// ----- Main render loop -----
+// ----- Main render loop
 function renderFrame(time) {
     ctx.clearRect(0, 0, view.width, view.height);
     ctx.fillStyle = '#181825';
@@ -484,7 +474,7 @@ const flowChart = new Chart($('flowChart').getContext('2d'), {
     },
 });
 
-// ----- Polling loop -----
+// ----- Polling loop
 const stateDensity = $('valDensity');
 const stateFlow = $('valFlow');
 const stateLanes = $('valLanes');
@@ -553,7 +543,7 @@ function recordSample(data, speedKmh) {
     flowChart.update();
 }
 
-// ----- Bootstrap -----
+// ----- Bootstrap
 resizeCanvas();
 requestAnimationFrame(renderFrame);
 
