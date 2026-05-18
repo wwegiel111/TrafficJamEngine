@@ -1,6 +1,6 @@
 """
 Traffic Simulation: Two-Lane Nagel-Schreckenberg Model
-Author: Senior Data Scientist
+Author: Wiktor Węgiel
 """
 
 import json
