@@ -1,43 +1,102 @@
-# AutobahnJam: Nagel-Schreckenberg Traffic Simulation
+# TrafficJamEngine
 
-AutobahnJam is an interactive, web-based macroscopic traffic simulation engine built on top of the two-lane **Nagel-Schreckenberg (NaSch)** cellular automata model. It simulates realistic traffic flow dynamics, bottlenecks, and the "phantom traffic jam" phenomenon, explicitly incorporating an on-ramp merging lane.
+Interactive web simulation of a two-lane highway with an on-ramp, built on the
+**Nagel-Schreckenberg (NaSch)** cellular automaton. The Python backend ticks the
+model in a background thread and exposes a small REST API; the browser polls
+that API and renders cars, ramps, weather, and accident events on a canvas.
 
-## 🚀 Features
+## Features
 
-* **Real-Time Physics Engine:** Emulates vehicle progression, lane incentive/safety evaluation, and randomization (dawdling) entirely in Python.
-* **On-Ramp Merging Dynamics:** Lane 2 serves as a dedicated on-ramp. Vehicles are strictly enforced to navigate to a predefined merging zone (`x >= 100`) before entering the main circulatory flow.
-* **Holographic Control Station UI:** A purely vanilla HTML5/JS `<canvas>` presentation that utilizes crisp orthogonal Cartesian renders, simulating an advanced engineering dashboard.
-* **Dynamic Parameter Sweeper:** Control maximum speed intervals, traffic density (inflow rate), visual timeframe stretching, and weather modes directly during runtime.
-* **Macroscopic Data Export:** Extracts telemetry straight into an analytical CSV file containing `[Time, Density, Flow, Speed, and Maneuvers]` for post-simulation analytical processing.
+- Real-time NaSch model (acceleration, braking, randomization, motion)
+- On-ramp merging logic with safe lane changes
+- Adjustable parameters at runtime: density, max speed, simulation speed, weather
+- Accident events that can be triggered and cleared from the UI
+- Live flow chart with theoretical capacity reference line
+- CSV export of the recorded session
+- Responsive UI that scales from 14" laptops up to 4K displays
 
-## 🛠 Tech Stack
+## Project layout
 
-- **Backend:** Python 3 (Vanilla standard library `http.server` & `threading`).
-- **Frontend:** HTML5, Context 2D Canvas, CSS3, vanilla JavaScript.
-- **Charts:** Chart.js integration via CDN.
+```
+.
+├── config.py        # All tunable constants (geometry, defaults, port)
+├── simulation.py    # Pure NaSch simulation kernel
+├── server.py        # HTTP server, ServerState, background worker
+├── app.js           # Front-end logic (polling, controls, rendering)
+├── index.html       # Page structure
+├── styles.css       # Responsive layout and theme
+└── README.md
+```
 
-## 🚦 How to Run Locally
+## Running locally
 
-You do not need to install any heavy packages or `pip` modules. The entire simulation relies on standard libraries.
+The server uses only Python's standard library, so no `pip install` is needed.
 
-1. **Start the Backend Engine:**
-   Open a terminal in the project directory and spin up the Python server:
-   ```bash
-   python3 server.py
-   ```
-   *The server will securely bind to port `8080` and run a daemon thread to maintain the simulation tick state.*
+```bash
+python3 server.py
+```
 
-2. **Open the Interface:**
-   Launch the `index.html` file in any modern web browser (Google Chrome or Mozilla Firefox recommended). 
-   ```bash
-   open index.html
-   ```
+Then open <http://localhost:8080/> in your browser.
 
-3. **Engage the Simulation:**
-   Hit `Start / Stop` on the UI timeline to kickstart the data flow. Modify parameters (such as enabling the `Weather: Pouring` configuration) to observe instantaneous model deviations. Once complete, hitting `Stop` invokes the diagnostic readout where you may safely download your CSV telemetry.
+The port can be overridden with the `PORT` environment variable:
 
-## ⚙️ Architecture 
+```bash
+PORT=9000 python3 server.py
+```
 
-- **State Persistence:** The `ServerState` object retains asynchronous continuity, maintaining sliding 30-tick windows of arrays independently from browser calls.
-- **Data Transport:** JSON payloads are dispatched via classic polling requests mapping from the frontend's fetching loops exactly onto `/api/state` and `/api/config`.
-- **Typing Strictness:** Built explicitly utilizing standard PEP8 parameters and Python `typing` constructs (`Dict`, `Tuple`, etc.) for immediate engineering legibility. 
+## API
+
+| Method | Path           | Description                                  |
+|--------|----------------|----------------------------------------------|
+| GET    | `/`            | Serves `index.html`                          |
+| GET    | `/styles.css`  | Stylesheet                                   |
+| GET    | `/app.js`      | Front-end script                             |
+| GET    | `/api/state`   | JSON snapshot of lanes + averaged statistics |
+| POST   | `/api/config`  | Apply runtime configuration changes          |
+
+### `POST /api/config` payload (all fields optional)
+
+```json
+{
+  "density": 0.15,
+  "p": 0.3,
+  "v_max": 3,
+  "speed_multiplier": 2.0,
+  "is_running": true,
+  "trigger_accident": false,
+  "clear_accident": false,
+  "reset": false
+}
+```
+
+## Model parameters
+
+| Symbol        | Meaning                                 | Default |
+|---------------|-----------------------------------------|---------|
+| `L`           | Cells per main lane                     | 150     |
+| `density`     | Spawn probability per step              | 0.10    |
+| `v_max`       | Maximum speed (cells per step)          | 2       |
+| `p`           | Random deceleration probability         | 0.30    |
+| `RAMP_START`  | First cell of the on-ramp               | 70      |
+| `RAMP_LENGTH` | Last usable cell on the on-ramp         | 115     |
+
+All defaults live in `config.py` and can be edited in one place.
+
+## Architecture notes
+
+- **Simulation kernel (`simulation.py`).** Pure Python class. Each `step()` runs
+  three phases: lane changes, forward motion, spawn. Returns `(flow,
+  lane_changes, density, avg_speed)`.
+- **Worker thread (`server.py`).** Calls `step()` every
+  `TICK_INTERVAL / speed_multiplier` seconds while the run is active. Pushes
+  samples into bounded sliding-window lists.
+- **HTTP layer.** `BaseHTTPRequestHandler` with small helper methods
+  (`_serve_file`, `_serve_state`, `_handle_config_update`). Returns JSON with
+  proper CORS headers.
+- **Front-end.** `app.js` polls `/api/state` every 150 ms, interpolates car
+  positions between snapshots, and draws everything in CSS pixels with HiDPI
+  scaling so the canvas stays sharp on Retina displays.
+
+## License
+
+Personal academic project.

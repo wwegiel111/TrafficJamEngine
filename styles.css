@@ -1,49 +1,75 @@
+/* ======================================================
+ * TrafficJamEngine - styles
+ * Layout adapts from small laptop displays up to 4K.
+ * Tested target: 14" MacBook Pro Retina (1512x982 logical).
+ * ====================================================== */
+
 :root {
     --bg-color: #2b2a2e;
     --surface-color: #232225;
-    --app-bg: #2b2b2b;
     --accent-color: #89b4fa;
+    --accent-green: #a6e3a1;
+    --accent-red: #f38ba8;
+    --accent-yellow: #f9e2af;
     --text-primary: #e4e4e4;
-    --text-secondary: #9a9a9a;
+    --text-secondary: #a0a0a0;
     --track-color: #3f404d;
-    --track-line: #a0a0a0;
+
+    /* Fluid sizing - shrinks on small screens, scales up on 4K */
+    --container-width: min(96vw, 1600px);
+    --canvas-height: clamp(360px, 50vh, 720px);
+    --chart-height: clamp(160px, 22vh, 280px);
+    --base-font: clamp(14px, 0.9vw + 8px, 18px);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
 }
 
 body {
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-color);
     color: var(--text-primary);
-    margin: 0;
-    padding: 40px 20px;
+    font-size: var(--base-font);
+    min-height: 100vh;
+    padding: clamp(16px, 2.5vh, 40px) clamp(12px, 2vw, 28px);
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
 .app-container {
-    width: 1040px;
+    width: var(--container-width);
     background-color: var(--surface-color);
     border-radius: 12px;
-    padding: 30px;
+    padding: clamp(16px, 2vw, 30px);
     box-shadow: 0 10px 20px rgba(0,0,0,0.2);
     margin-bottom: 20px;
 }
+
+/* ----- Top bar ----- */
 
 .top-bar {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
     margin-bottom: 24px;
 }
 
 .title {
-    font-size: 1.3rem;
+    font-size: clamp(1rem, 0.7vw + 0.7rem, 1.5rem);
     font-weight: 600;
 }
 
 .metrics-group {
     display: flex;
-    gap: 24px;
+    gap: clamp(16px, 1.5vw, 32px);
+    flex-wrap: wrap;
 }
 
 .metric {
@@ -53,57 +79,92 @@ body {
 }
 
 .metric-label {
-    font-size: 11px;
+    font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 1.5px;
-    color: #a0a0a0;
+    color: var(--text-secondary);
     margin-bottom: 6px;
     font-weight: 600;
 }
 
 .metric-value {
     color: #ffffff;
+    font-size: clamp(1rem, 0.5vw + 0.8rem, 1.4rem);
+    font-weight: 600;
 }
 
+.metric-speed { color: var(--accent-green); }
+
+/* ----- Canvas + chart ----- */
+
 .canvas-container {
-    display: flex;
-    justify-content: center;
+    display: block;
+    width: 100%;
     background-color: #121215;
     border-radius: 16px;
-    padding: 20px;
+    padding: clamp(10px, 1.2vw, 20px);
     margin-bottom: 24px;
 }
 
+#roadCanvas {
+    display: block;
+    width: 100%;
+    height: var(--canvas-height);
+}
+
+.chart-container {
+    width: 100%;
+    height: var(--chart-height);
+    margin-bottom: 24px;
+}
+
+#flowChart {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* ----- Controls grid ----- */
+
 .controls {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px 30px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px clamp(16px, 2vw, 30px);
 }
 
 .control-row {
     display: flex;
     align-items: center;
     gap: 15px;
+    min-width: 0;
+}
+
+.control-row-buttons,
+.control-row-events {
+    gap: 10px;
 }
 
 .control-label {
     font-size: 0.95rem;
     width: 170px;
+    flex-shrink: 0;
 }
 
 input[type="range"] {
-    flex-grow: 1;
+    flex: 1 1 auto;
+    min-width: 0;
     height: 6px;
     -webkit-appearance: none;
+    appearance: none;
     background: #3e3e3e;
     border-radius: 3px;
 }
 
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
+    appearance: none;
     width: 14px;
     height: 14px;
-    background: #89b4fa;
+    background: var(--accent-color);
     border-radius: 50%;
     cursor: pointer;
 }
@@ -121,34 +182,136 @@ input[type="range"]::-webkit-slider-thumb {
     font-size: 1rem;
 }
 
+.number-input-wide { width: 60px; }
+
+/* ----- Buttons ----- */
+
 .btn {
     background-color: #3b3c4f;
-    color: #e4e4e4;
+    color: var(--text-primary);
     border: none;
-    border-radius: 16px;
+    border-radius: 14px;
     padding: 10px 16px;
     cursor: pointer;
-    font-size: 1rem;
+    font-size: 0.95rem;
     transition: 0.2s;
-    display: flex;
+    display: inline-flex;
     justify-content: center;
     align-items: center;
-    font-weight: 400;
+    font-weight: 500;
 }
 
-.btn:hover {
-    background-color: #4a4d62;
+.btn:hover { background-color: #4a4d62; }
+
+.btn-secondary { background-color: #313244; }
+
+.btn-accident {
+    background-color: var(--accent-red);
+    color: #111;
+    font-weight: bold;
 }
 
-.btn-full {
-    grid-column: span 2;
+.btn-weather {
+    background-color: var(--accent-yellow);
+    color: #111;
+    font-weight: bold;
+    margin-left: auto;
 }
 
-.diagram-container {
-    width: 800px;
-    background: var(--surface-color);
-    padding: 30px;
+.btn-rain {
+    background-color: var(--accent-color);
+    color: #fff;
+}
+
+.btn-running {
+    background-color: var(--accent-red);
+    color: #111;
+    font-weight: 600;
+}
+
+.btn-primary {
+    background-color: var(--accent-color);
+    color: #111;
+    font-weight: bold;
+    width: 100%;
+    margin-top: 12px;
+}
+
+/* ----- Modal ----- */
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(4px);
+    padding: 16px;
+}
+
+.modal-card {
+    background: #1e1e2e;
+    padding: clamp(24px, 3vw, 40px);
     border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
-    box-sizing: border-box;
+    border: 1px solid var(--track-color);
+    color: #cdd6f4;
+    text-align: center;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modal-title {
+    margin-top: 0;
+    color: var(--accent-green);
+    font-weight: 600;
+    font-size: clamp(1.4rem, 1vw + 1rem, 1.8rem);
+}
+
+.modal-subtitle {
+    color: var(--text-secondary);
+    margin-bottom: 28px;
+}
+
+.modal-stats {
+    text-align: left;
+    font-size: 1rem;
+    line-height: 1.8;
+    background: #11111b;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.modal-stats p { margin: 5px 0; }
+
+.stat-speed { color: var(--accent-green); font-weight: bold; }
+.stat-flow  { color: var(--accent-color); font-weight: bold; }
+.stat-lanes { color: var(--accent-red);   font-weight: bold; }
+
+/* ----- Responsive breakpoints ----- */
+
+/* Narrow laptops + 14" MacBook Pro at default scaling: stack controls into 1 column */
+@media (max-width: 1100px) {
+    .controls { grid-template-columns: 1fr; }
+    .top-bar { flex-direction: column; align-items: flex-start; }
+}
+
+/* Tablets / small windows */
+@media (max-width: 720px) {
+    .control-label { width: 130px; }
+    .metrics-group { gap: 14px; }
+    .btn-weather { margin-left: 0; }
+    .control-row-events { flex-wrap: wrap; }
+}
+
+/* 4K and ultra-wide displays - lift container limit, expand canvas */
+@media (min-width: 2400px) {
+    :root {
+        --container-width: min(80vw, 2400px);
+        --canvas-height: clamp(640px, 55vh, 1100px);
+        --chart-height: clamp(220px, 24vh, 380px);
+    }
 }
