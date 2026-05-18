@@ -13,31 +13,62 @@ import uuid
 from typing import List, Dict, Optional, Tuple, Any
 
 class TrafficSimulation:
-    def __init__(self, L: int = 100, density: float = 0.2, v_max: int = 5, p: float = 0.3):
-        self.L: int = L                  
-        self.density: float = density      # In an open system, this serves as the Inflow Rate Probability
-        self.v_max: int = v_max          
-        self.p: float = p                  # Probability of random braking
-        
-        # Initialization of three lanes. 0: Left, 1: Right, 2: On-Ramp
-        self.lanes = []
-        for _ in range(3):
-            pas_ruchu = [None] * L  # Mnożenie listy stworzy L pustych miejsc
-            self.lanes.append(pas_ruchu)
+    """
+    Symulacja ruchu - model Nagela-Schreckenberga (NaSch) z otwartymi granicami.
 
-    def _get_gap(self, lane: int, x: int) -> int:
-        """Returns the distance in free cells preserving physical road end constraints (open boundaries)."""
-        limit = self.L if lane < 2 else 115 
+    Mamy trzy pasy reprezentowane jako listy komórek:
+      - pas 0: lewy (główny)
+      - pas 1: prawy (główny)
+      - pas 2: rozbiegowy (krótszy, kończy się przed końcem trasy)
+
+    Każda komórka jest pusta (None) albo trzyma auto:
+      {'id': str, 'v': int, 'crashed': bool (opcjonalnie)}.
+    """
+
+    # Indeksy pasów - czytelniej niż 0/1/2 w środku kodu
+    LANE_LEFT = 0
+    LANE_RIGHT = 1
+    LANE_RAMP = 2
+
+    # Geometria pasa rozbiegowego
+    RAMP_LENGTH = 115   # użyteczna długość pasa rozbiegowego (komórki 0..114)
+    RAMP_START = 70     # od tej komórki pojawiają się auta na rozbiegowym
+
+    def __init__(self, L=100, density=0.2, v_max=5, p=0.3):
+        self.L = L                  # długość pasów głównych (komórki)
+        self.density = density      # prawdopodobieństwo wjazdu auta w danym kroku
+        self.v_max = v_max          # maksymalna prędkość (komórki na krok)
+        self.p = p                  # prawdopodobieństwo losowego zwolnienia
+
+        # Trzy pasy o tej samej długości L (rozbiegowy używa tylko 0..RAMP_LENGTH-1)
+        self.lanes = [[None] * L for _ in range(3)]
+
+        # Liczniki do nadawania unikalnych ID nowo spawnowanym autom
+        self.sim_id = uuid.uuid4().hex[:6]
+        self.car_id_counter = 0
+
+    # ---------- Pomocnicze: liczenie odstępów między autami ----------
+
+    def _lane_limit(self, lane):
+        """Zwraca długość użyteczną pasa (rozbiegowy jest krótszy niż główne)."""
+        return self.RAMP_LENGTH if lane == self.LANE_RAMP else self.L
+
+    def _gap_ahead(self, lane, x):
+        """Ile pustych komórek jest przed autem na pozycji x na danym pasie."""
+        limit = self._lane_limit(lane)
         for i in range(1, self.v_max + 2):
+            # Zbliżamy się do końca pasa
             if x + i >= limit:
-                # Car reaching end of ramp stops if no gap vs main lane cars driving off-screen safely.
-                return (limit - x - 1) if lane == 2 else self.v_max
+                # Na rozbiegowym musimy zatrzymać się przed końcem,
+                # na pasach głównych zakładamy "otwartą drogę" (auta wyjeżdżają).
+                return (limit - x - 1) if lane == self.LANE_RAMP else self.v_max
+            # Trafiliśmy na inne auto przed sobą
             if self.lanes[lane][x + i] is not None:
                 return i - 1
         return self.v_max
 
-    def _get_back_gap(self, lane: int, x: int) -> int:
-        """Checks the gap behind for safety from an open geolocation perspective."""
+    def _gap_behind(self, lane, x):
+        """Ile pustych komórek jest za pozycją x (potrzebne przy ocenie zmiany pasa)."""
         for i in range(1, self.v_max + 2):
             if x - i < 0:
                 return self.v_max
@@ -45,103 +76,143 @@ class TrafficSimulation:
                 return i - 1
         return self.v_max
 
-    def step(self) -> Tuple[int, int, float, float]:
+    # ---------- Pojedynczy krok symulacji (3 fazy) ----------
+
+    def step(self):
         """
-        A single timestep of the NaSch model for an OPEN route ("Straight Section with On-Ramp Hub").
-        Returns: (total_flow, lane_changes, actual_density, avg_speed)
+        Jeden krok modelu NaSch:
+          Faza 1: zmiany pasa
+          Faza 2: ruch do przodu (przyspieszenie -> hamowanie -> losowość -> przesunięcie)
+          Faza 3: wjazd nowych aut (inflow)
+
+        Zwraca: (przepływ, liczba_zmian_pasa, gęstość, średnia_prędkość)
         """
-        # ==================== PHASE 1: Lane Changes ====================
-        new_lanes = [list(self.lanes[lane]) for lane in range(3)]
-        moves: List[Dict[str, int]] = []
-        
+        lane_changes = self._phase_lane_changes()
+        flow = self._phase_move()
+        self._phase_spawn()
+        density, avg_speed = self._compute_metrics()
+        return flow, lane_changes, density, avg_speed
+
+    # --- Faza 1 ---
+
+    def _phase_lane_changes(self):
+        """Każde auto sprawdza czy chce i może zmienić pas, potem zmiany robimy naraz."""
+        moves = []  # lista (pas_zrodlowy, pas_docelowy, x)
+
         for lane in range(3):
             for x in range(self.L):
                 car = self.lanes[lane][x]
-                if car and not car.get('crashed', False):
-                    v = car['v']
-                    
-                    if lane == 2:
-                        other_lane = 1
-                        gap_back_other = self._get_back_gap(other_lane, x)
-                        safety = (self.lanes[other_lane][x] is None) and (gap_back_other >= self.v_max)
-                        if safety:
-                            moves.append({'from': lane, 'to': other_lane, 'x': x})
-                    else:
-                        other_lane = 1 - lane
-                        gap_current = self._get_gap(lane, x)
-                        gap_other = self._get_gap(other_lane, x)
-                        gap_back_other = self._get_back_gap(other_lane, x)
-                        
-                        incentive = (gap_current < v) and (gap_other > gap_current)
-                        safety = (self.lanes[other_lane][x] is None) and (gap_back_other >= self.v_max)
-                        
-                        max_merge_zone = 100
-                        if lane == 2 and not ((x >= max_merge_zone) or gap_current < v):
-                            continue
-                                
-                        if incentive and safety:
-                            moves.append({'from': lane, 'to': other_lane, 'x': x})
-        
-        # Execute lateral transfers
-        for move in moves:
-            l_from, l_to, x = move['from'], move['to'], move['x']
-            if new_lanes[l_to][x] is None:
-                new_lanes[l_to][x] = new_lanes[l_from][x]
-                new_lanes[l_from][x] = None
+                if not car or car.get('crashed'):
+                    continue
+
+                target = self._target_lane(lane)
+                if self._can_change_lane(car, lane, target, x):
+                    moves.append((lane, target, x))
+
+        # Stosujemy zmiany na świeżej kopii, żeby auta sobie nie wchodziły w drogę
+        new_lanes = [list(row) for row in self.lanes]
+        for src, dst, x in moves:
+            if new_lanes[dst][x] is None:
+                new_lanes[dst][x] = new_lanes[src][x]
+                new_lanes[src][x] = None
 
         self.lanes = new_lanes
-        
-        # ==================== PHASE 2: Forward Motion and Spawn Generation ====================
-        new_lanes = [[None for _ in range(self.L)] for _ in range(3)]
-        total_flow = 0 
-        
+        return len(moves)
+
+    def _target_lane(self, lane):
+        """Na który pas auto chce się przeniesc."""
+        if lane == self.LANE_RAMP:
+            return self.LANE_RIGHT       # rozbiegowy zawsze celuje w prawy
+        return 1 - lane                  # lewy <-> prawy
+
+    def _can_change_lane(self, car, lane, target, x):
+        """Decyduje czy zmiana pasa jest bezpieczna (i czy w ogóle warto)."""
+        # Bezpieczeństwo - komórka docelowa pusta i z tyłu nikt nie nadjeżdża zbyt blisko
+        cell_free = self.lanes[target][x] is None
+        safe_behind = self._gap_behind(target, x) >= self.v_max
+        if not (cell_free and safe_behind):
+            return False
+
+        # Z rozbiegowego: zmieniamy pas zawsze gdy bezpiecznie - chcemy się włączyć.
+        if lane == self.LANE_RAMP:
+            return True
+
+        # Z głównego pasa: tylko gdy mamy zatłoczenie i sąsiad daje większy odstęp.
+        gap_here = self._gap_ahead(lane, x)
+        gap_there = self._gap_ahead(target, x)
+        return gap_here < car['v'] and gap_there > gap_here
+
+    # --- Faza 2 ---
+
+    def _phase_move(self):
+        """Standardowy NaSch: 1) przyspiesz 2) zwolnij do gap 3) losowo zwolnij 4) przesun."""
+        new_lanes = [[None] * self.L for _ in range(3)]
+        flow = 0  # ile aut wyjechało z głównych pasów (przepływ przez koniec drogi)
+
         for lane in range(3):
             for x in range(self.L):
                 car = self.lanes[lane][x]
-                if car is not None:
-                    if car.get('crashed', False):
-                        new_lanes[lane][x] = car
-                        continue
-                        
-                    v = car['v']
-                    gap = self._get_gap(lane, x)
-                    
-                    v = min(v + 1, self.v_max, gap)             
-                    if random.random() < self.p: 
-                        v = max(v - 1, 0)
-                        
-                    car['v'] = v
-                    new_x = x + v 
-                    
-                    if lane < 2 and new_x >= self.L: 
-                        total_flow += 1 
-                    elif lane == 2 and new_x >= 115:
-                        new_lanes[lane][114] = car 
-                    else:
-                        new_lanes[lane][new_x] = car
-                        
-        # ==================== PHASE 3: Inflow Injection ====================
-        for lane in range(2):
-            if new_lanes[lane][0] is None and random.random() < self.density:
-                new_lanes[lane][0] = {'id': f"{self.sim_id}_{self.car_id_counter}", 'v': self.v_max}
-                self.car_id_counter += 1
-                
-        ramp_start = 70 
-        if new_lanes[2][ramp_start] is None and random.random() < (self.density * 0.6):
-            new_lanes[2][ramp_start] = {'id': f"{self.sim_id}_{self.car_id_counter}", 'v': max(0, self.v_max - 2)} 
-            self.car_id_counter += 1
-            
-        self.lanes = new_lanes
-        
-        # Calculate macroscopic traffic observables
-        actual_cars_main = sum(1 for lane in range(2) for c in self.lanes[lane] if c)
-        actual_density = actual_cars_main / (self.L * 2)
-        
-        actual_cars_total = actual_cars_main + sum(1 for c in self.lanes[2] if c)
-        total_v = sum(c['v'] for lane in self.lanes for c in lane if c)
-        avg_speed = total_v / actual_cars_total if actual_cars_total > 0 else 0
+                if car is None:
+                    continue
 
-        return total_flow, len(moves), actual_density, avg_speed
+                # Auto rozbite stoi w miejscu i blokuje pas
+                if car.get('crashed'):
+                    new_lanes[lane][x] = car
+                    continue
+
+                # 1) Przyspiesz, ale nie powyżej v_max ani powyżej dostępnego odstępu
+                # 2) Z prawdopodobieństwem p losowo zwolnij o 1
+                v = min(car['v'] + 1, self.v_max, self._gap_ahead(lane, x))
+                if random.random() < self.p:
+                    v = max(v - 1, 0)
+                car['v'] = v
+
+                # 3) Przesuń auto do nowej komórki
+                new_x = x + v
+                limit = self._lane_limit(lane)
+
+                if lane != self.LANE_RAMP and new_x >= self.L:
+                    flow += 1                              # auto wyjechało poza scenę
+                elif lane == self.LANE_RAMP and new_x >= limit:
+                    new_lanes[lane][limit - 1] = car       # forsujemy stop na końcu rozbiegowego
+                else:
+                    new_lanes[lane][new_x] = car
+
+        self.lanes = new_lanes
+        return flow
+
+    # --- Faza 3 ---
+
+    def _phase_spawn(self):
+        """Generujemy nowe auta na początkach pasów (otwarta granica)."""
+        # Pasy główne: na komórce 0 z prawdopodobieństwem density
+        for lane in (self.LANE_LEFT, self.LANE_RIGHT):
+            if self.lanes[lane][0] is None and random.random() < self.density:
+                self.lanes[lane][0] = self._make_car(self.v_max)
+
+        # Pas rozbiegowy: rzadziej (×0.6) i z mniejszą prędkością początkową
+        if self.lanes[self.LANE_RAMP][self.RAMP_START] is None \
+                and random.random() < self.density * 0.6:
+            self.lanes[self.LANE_RAMP][self.RAMP_START] = self._make_car(max(0, self.v_max - 2))
+
+    def _make_car(self, v):
+        """Tworzy nowe auto z unikalnym ID."""
+        car = {'id': f"{self.sim_id}_{self.car_id_counter}", 'v': v}
+        self.car_id_counter += 1
+        return car
+
+    # --- Statystyki ---
+
+    def _compute_metrics(self):
+        """Liczy gęstość (na pasach głównych) i średnią prędkość wszystkich aut."""
+        cars_main = sum(1 for lane in (self.LANE_LEFT, self.LANE_RIGHT)
+                        for c in self.lanes[lane] if c)
+        density = cars_main / (self.L * 2)
+
+        all_cars = [c for lane in self.lanes for c in lane if c]
+        avg_speed = sum(c['v'] for c in all_cars) / len(all_cars) if all_cars else 0
+
+        return density, avg_speed
 
 
 # ====================================================================
